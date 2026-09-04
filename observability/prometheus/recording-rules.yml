@@ -1,0 +1,13 @@
+groups:
+  - name: pg-cdc-lab
+    interval: 5s
+    rules:
+      - record: pg_cdc_lab:commit_to_visible_seconds:p99_5m
+        expr: histogram_quantile(0.99, sum by (le, configuration) (rate(pg_cdc_lab_commit_to_visible_seconds_bucket[5m])))
+      - record: pg_cdc_lab:queue_delay_seconds:p99_1m
+        expr: histogram_quantile(0.99, sum by (le, configuration) (rate(pg_cdc_lab_generator_queue_delay_seconds_bucket[1m])))
+      - record: pg_cdc_lab:commit_to_visible_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (le, configuration) (rate(pg_cdc_lab_commit_to_visible_seconds_bucket[5m])))
+      - record: pg_cdc_lab:commit_to_visible_seconds:p50_5m
+        expr: histogram_quantile(0.50, sum by (le, configuration) (rate(pg_cdc_lab_commit_to_visible_seconds_bucket[5m])))
+

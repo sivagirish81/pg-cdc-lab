@@ -151,6 +151,11 @@ activemq-data/
 .env
 .envrc
 .venv
+venv1
+.DS_Store
+results/
+comparison/
+report/
 env/
 venv/
 ENV/

@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: pg-cdc-lab
+    orgId: 1
+    folder: pg-cdc-lab
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 10
+    options:
+      path: /var/lib/grafana/dashboards

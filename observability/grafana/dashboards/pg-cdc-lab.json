@@ -1,0 +1,27 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {"id": 1, "title": "Experiment phase", "type": "state-timeline", "gridPos": {"h": 5, "w": 24, "x": 0, "y": 0}, "targets": [{"expr": "pg_cdc_lab_experiment_phase{configuration=\"$configuration\"}", "legendFormat": "{{phase}}"}]},
+    {"id": 2, "title": "Rolling commit-to-visible latency", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5}, "fieldConfig": {"defaults": {"unit": "s"}}, "targets": [{"expr": "pg_cdc_lab:commit_to_visible_seconds:p50_5m{configuration=\"$configuration\"}", "legendFormat": "p50"}, {"expr": "pg_cdc_lab:commit_to_visible_seconds:p95_5m{configuration=\"$configuration\"}", "legendFormat": "p95"}, {"expr": "pg_cdc_lab:commit_to_visible_seconds:p99_5m{configuration=\"$configuration\"}", "legendFormat": "p99"}]},
+    {"id": 3, "title": "Achieved TPS", "type": "timeseries", "gridPos": {"h": 8, "w": 6, "x": 12, "y": 5}, "targets": [{"expr": "pg_cdc_lab_achieved_tps{configuration=\"$configuration\"}", "legendFormat": "TPS"}]},
+    {"id": 4, "title": "Generator queue-delay p99", "type": "timeseries", "gridPos": {"h": 8, "w": 6, "x": 18, "y": 5}, "fieldConfig": {"defaults": {"unit": "s"}}, "targets": [{"expr": "pg_cdc_lab:queue_delay_seconds:p99_1m{configuration=\"$configuration\"}", "legendFormat": "p99"}]},
+    {"id": 5, "title": "Retained WAL", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 0, "y": 13}, "fieldConfig": {"defaults": {"unit": "bytes"}}, "targets": [{"expr": "pg_cdc_lab_retained_wal_bytes{configuration=\"$configuration\"}", "legendFormat": "retained"}]},
+    {"id": 6, "title": "Unconfirmed WAL", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 8, "y": 13}, "fieldConfig": {"defaults": {"unit": "bytes"}}, "targets": [{"expr": "pg_cdc_lab_unconfirmed_wal_bytes{configuration=\"$configuration\"}", "legendFormat": "unconfirmed"}]},
+    {"id": 7, "title": "Restart-to-confirmed distance", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 16, "y": 13}, "fieldConfig": {"defaults": {"unit": "bytes"}}, "targets": [{"expr": "pg_cdc_lab_restart_to_confirmed_bytes{configuration=\"$configuration\"}", "legendFormat": "distance"}]},
+    {"id": 8, "title": "Logical decoding spill versus stream", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 0, "y": 21}, "fieldConfig": {"defaults": {"unit": "bytes"}}, "targets": [{"expr": "pg_cdc_lab_spill_bytes{configuration=\"$configuration\"}", "legendFormat": "spill"}, {"expr": "pg_cdc_lab_stream_bytes{configuration=\"$configuration\"}", "legendFormat": "stream"}]},
+    {"id": 9, "title": "Large transaction visibility", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 8, "y": 21}, "targets": [{"expr": "pg_cdc_lab_large_visible_rows{configuration=\"$configuration\"}", "legendFormat": "rows"}, {"expr": "pg_cdc_lab_large_unique_rows{configuration=\"$configuration\"}", "legendFormat": "unique"}]},
+    {"id": 10, "title": "Rollback leakage", "type": "timeseries", "gridPos": {"h": 8, "w": 4, "x": 16, "y": 21}, "targets": [{"expr": "pg_cdc_lab_rollback_visible_rows{configuration=\"$configuration\"}", "legendFormat": "visible"}]},
+    {"id": 11, "title": "Observer errors", "type": "timeseries", "gridPos": {"h": 8, "w": 4, "x": 20, "y": 21}, "targets": [{"expr": "sum by (phase) (increase(pg_cdc_lab_observer_errors_total{configuration=\"$configuration\"}[5m]))", "legendFormat": "{{phase}}"}]}
+  ],
+  "refresh": "5s",
+  "schemaVersion": 41,
+  "tags": ["pg-cdc-lab", "cdc", "postgresql", "clickhouse"],
+  "templating": {"list": [{"name": "configuration", "label": "Configuration", "type": "custom", "query": "default_60s,latency_10s,cdc_v2", "current": {"text": "default_60s", "value": "default_60s"}, "options": [{"selected": true, "text": "default_60s", "value": "default_60s"}, {"selected": false, "text": "latency_10s", "value": "latency_10s"}, {"selected": false, "text": "cdc_v2", "value": "cdc_v2"}]}]},
+  "time": {"from": "now-30m", "to": "now"},
+  "timezone": "browser",
+  "title": "pg-cdc-lab transaction boundary",
+  "uid": "pg-cdc-lab",
+  "version": 1
+}
