@@ -153,7 +153,9 @@ activemq-data/
 .venv
 venv1
 .DS_Store
-results/
+results/*
+!results/examples/
+!results/examples/**
 comparison/
 report/
 env/

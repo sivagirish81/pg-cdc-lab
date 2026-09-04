@@ -32,6 +32,15 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
+def write_public_metadata(path: Path, metadata: dict[str, Any]) -> None:
+    from analyze import sanitize_run_metadata
+
+    path.write_text(
+        json.dumps(sanitize_run_metadata(metadata), indent=2, default=str) + "\n",
+        encoding="utf-8",
+    )
+
+
 def validate_table_name(value: str) -> str:
     parts = value.split(".")
     if len(parts) not in (1, 2) or not all(
@@ -377,7 +386,9 @@ def make_destination(config: Config):
 
 async def setup_source(config: Config) -> None:
     psycopg, _ = await import_pg()
-    sql = (Path(__file__).with_name("setup.sql")).read_text(encoding="utf-8")
+    sql = (Path(__file__).with_name("sql") / "postgres" / "setup.sql").read_text(
+        encoding="utf-8"
+    )
     async with await psycopg.AsyncConnection.connect(
         config.pg_dsn, autocommit=True
     ) as conn:
@@ -660,6 +671,14 @@ async def clickpipe_metrics_monitor(
     while not stop.is_set():
         try:
             record = await asyncio.to_thread(scrape_clickpipe_metrics, settings)
+            for private_field in (
+                "clickhouse_service_id",
+                "clickhouse_service_name",
+                "clickpipe_id",
+                "clickpipe_name",
+            ):
+                if record.get(private_field):
+                    record[private_field] = "<redacted>"
             record.update(
                 {
                     "run_id": str(run_id),
@@ -897,7 +916,7 @@ async def elephant_transaction(
     payload_size: int,
     hold_seconds: float,
     evidence: Evidence,
-) -> None:
+) -> dict[str, Any]:
     psycopg, _ = await import_pg()
     table = validate_table_name("cdc_lab.cdc_probe_large")
     evidence.set_phase("large_load")
@@ -924,12 +943,26 @@ async def elephant_transaction(
         await asyncio.sleep(hold_seconds)
         evidence.set_phase("outcome")
         evidence.event("elephant_outcome_sent", outcome=outcome)
+        outcome_started = time.perf_counter()
         if outcome == "commit":
             await conn.commit()
         else:
             await conn.rollback()
-        evidence.event("elephant_outcome_ack", outcome=outcome)
+        outcome_duration_ms = (time.perf_counter() - outcome_started) * 1000
+        outcome_observed_at = utc_now()
+        evidence.event(
+            "elephant_outcome_ack",
+            outcome=outcome,
+            outcome_observed_at=outcome_observed_at,
+            client_outcome_duration_ms=outcome_duration_ms,
+        )
         evidence.set_phase("post_outcome_drain")
+        return {
+            "commit_observed_at": outcome_observed_at if outcome == "commit" else None,
+            "client_commit_duration_ms": (
+                outcome_duration_ms if outcome == "commit" else None
+            ),
+        }
 
 
 async def guarded(awaitable: Any, safety_stop: asyncio.Event) -> Any:
@@ -976,6 +1009,7 @@ async def run_experiment(config: Config, args: argparse.Namespace) -> Path:
     result_dir = Path(args.results_dir) / f"{stamp}_{args.outcome}_{run_id}"
     result_dir.mkdir(parents=True)
     evidence = Evidence(result_dir)
+    started_utc = utc_now()
     if not args.no_prometheus:
         from metrics import LabMetrics
 
@@ -990,7 +1024,17 @@ async def run_experiment(config: Config, args: argparse.Namespace) -> Path:
     metadata = {
         "run_id": str(run_id),
         "outcome": args.outcome,
-        "started_utc": utc_now(),
+        "started_utc": started_utc,
+        "utc_started_at": started_utc,
+        "commit_observed_at": None,
+        "client_commit_duration_ms": None,
+        "transaction_rows": args.large_rows,
+        "workload_mode": "automated_driver",
+        "source_table": "cdc_lab.cdc_probe_large",
+        "destination_table": config.ch_large_table,
+        "raw_peerdb_table": None,
+        "small_txn_rate": args.rate,
+        "hold_open_seconds": args.hold_seconds,
         "repository": "pg-cdc-lab",
         "destination_adapter": "clickhouse",
         "configuration": config.configuration,
@@ -998,8 +1042,8 @@ async def run_experiment(config: Config, args: argparse.Namespace) -> Path:
         "pull_batch_size": config.pull_batch_size,
         "clickpipe_metrics": {
             "enabled": config.cloud_metrics_settings() is not None,
-            "organization_id": config.cloud_organization_id,
-            "clickpipe_id": config.clickpipe_id,
+            "organization_id_recorded": False,
+            "clickpipe_id_configured": config.clickpipe_id is not None,
             "poll_seconds": config.clickpipe_metrics_poll_seconds,
         },
         "rate": args.rate,
@@ -1034,9 +1078,7 @@ async def run_experiment(config: Config, args: argparse.Namespace) -> Path:
         "clickhouse": preflight_ch,
         "credentials_redacted": True,
     }
-    (result_dir / "metadata.json").write_text(
-        json.dumps(metadata, indent=2, default=str) + "\n", encoding="utf-8"
-    )
+    write_public_metadata(result_dir / "metadata.json", metadata)
     (result_dir / "operator_notes.md").write_text(
         "# Operator notes\n\n- ClickPipe sync interval: \n- Pull batch size: \n"
         "- Managed Postgres size/region/HA: \n- ClickHouse size/region: \n"
@@ -1109,7 +1151,7 @@ async def run_experiment(config: Config, args: argparse.Namespace) -> Path:
         await guarded(asyncio.sleep(args.baseline_seconds), observer_stop)
         evidence.event("baseline_complete")
         if not args.load_only:
-            await guarded(
+            outcome_metadata = await guarded(
                 elephant_transaction(
                     config,
                     run_id,
@@ -1121,6 +1163,8 @@ async def run_experiment(config: Config, args: argparse.Namespace) -> Path:
                 ),
                 observer_stop,
             )
+            metadata.update(outcome_metadata)
+            write_public_metadata(result_dir / "metadata.json", metadata)
             await guarded(asyncio.sleep(args.recovery_seconds), observer_stop)
         evidence.event("run_stop_requested")
     except Exception as exc:

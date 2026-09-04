@@ -15,6 +15,7 @@ from analyze import (
     recovery_time,
     render_markdown,
     sanitize,
+    sanitize_run_metadata,
     wal_amplification,
     write_analysis,
 )
@@ -99,6 +100,22 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(clean["pg_dsn"], "<redacted>")
         self.assertNotIn("secret", clean["note"])
         self.assertEqual(clean["nested"]["password"], "<redacted>")
+
+    def test_public_metadata_redacts_account_identifiers(self):
+        clean = sanitize_run_metadata(
+            {
+                "postgres": {
+                    "database": "private_db",
+                    "slot": {"slot_name": "private_slot"},
+                },
+                "clickpipe_metrics": {"organization_id": "org-1"},
+                "clickpipe_id": "pipe-1",
+            }
+        )
+        self.assertEqual(clean["postgres"]["database"], "<redacted>")
+        self.assertEqual(clean["postgres"]["slot"]["slot_name"], "<redacted>")
+        self.assertEqual(clean["clickpipe_id"], "<redacted>")
+        self.assertTrue(clean["credentials_redacted"])
 
     def test_identifiers(self):
         self.assertEqual(validate_table_name("cdc_lab.t"), '"cdc_lab"."t"')

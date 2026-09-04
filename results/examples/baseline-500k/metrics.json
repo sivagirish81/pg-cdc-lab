@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "run_id": "eeadf06b-b85a-4880-80d2-3053f8539b91",
+  "transaction_rows": 500000,
+  "commit_ts": "2026-09-04T07:37:57.350374Z",
+  "destination_table": "cdc_lab_cdc_probe_large",
+  "raw_peerdb_table": "default._peerdb_raw_mirror_66293a1b__8762__4433__b816__898bd6a4479a",
+  "first_raw_ts": "2026-09-04T07:37:57.815785937Z",
+  "last_raw_ts": "2026-09-04T07:38:05.536255907Z",
+  "commit_to_first_raw_s": 0.465411,
+  "raw_record_span_s": 7.72047,
+  "peerdb_batch_count": 1,
+  "peerdb_batch_ids": [
+    186
+  ],
+  "raw_insert_start_ts": null,
+  "raw_insert_finish_ts": null,
+  "raw_insert_ms": 1197,
+  "raw_insert_memory_mib": 459.51,
+  "observed_select_distinct_ms": 66,
+  "intermediate_processing_ms": 93.829,
+  "final_insert_start_ts": null,
+  "final_insert_finish_ts": null,
+  "final_insert_ms": 653,
+  "final_insert_memory_mib": 375.67,
+  "first_sync_ts": "2026-09-04T07:38:07.319000Z",
+  "last_sync_ts": "2026-09-04T07:38:07.319000Z",
+  "sync_timestamp_count": 1,
+  "commit_to_sync_s": 9.968626,
+  "measurement_scope": "one observed baseline run",
+  "caveat": "The checked-in source data did not include absolute query-log start and finish timestamps, so those fields remain null rather than being inferred."
+}

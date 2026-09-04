@@ -22,7 +22,11 @@ PHASES = (
     "post_outcome_drain",
     "recovered",
 )
-SECRET_KEYS = re.compile(r"(password|passwd|secret|token|dsn|uri|connection)", re.I)
+SECRET_KEYS = re.compile(
+    r"(password|passwd|secret|token|dsn|uri|connection|organization_id|"
+    r"clickpipe_(?:id|name)|clickhouse_service_(?:id|name))",
+    re.I,
+)
 URI_CREDENTIALS = re.compile(
     r"(?P<scheme>[a-z][a-z0-9+.-]*://)(?P<userinfo>[^/@\s]+)@", re.I
 )
@@ -149,6 +153,25 @@ def sanitize(value: Any) -> Any:
     return value
 
 
+def sanitize_run_metadata(value: dict[str, Any]) -> dict[str, Any]:
+    """Return metadata safe for checked-in artifacts and evidence bundles."""
+    clean = sanitize(value)
+    postgres = clean.get("postgres")
+    if isinstance(postgres, dict):
+        if "database" in postgres:
+            postgres["database"] = "<redacted>"
+        if "user" in postgres:
+            postgres["user"] = "<redacted>"
+        slot = postgres.get("slot")
+        if isinstance(slot, dict) and "slot_name" in slot:
+            slot["slot_name"] = "<redacted>"
+        for item in postgres.get("logical_slots", []):
+            if isinstance(item, dict) and "slot_name" in item:
+                item["slot_name"] = "<redacted>"
+    clean["credentials_redacted"] = True
+    return clean
+
+
 def _float(row: dict[str, str], key: str) -> float | None:
     try:
         return float(row[key]) if row.get(key) not in (None, "") else None
@@ -262,7 +285,7 @@ def analyze(result_dir: Path) -> dict[str, Any]:
     errors = read_events(result_dir / "errors.jsonl")
     metadata_path = result_dir / "metadata.json"
     metadata = (
-        sanitize(json.loads(metadata_path.read_text()))
+        sanitize_run_metadata(json.loads(metadata_path.read_text()))
         if metadata_path.exists()
         else {}
     )

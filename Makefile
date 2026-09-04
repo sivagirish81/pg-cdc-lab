@@ -1,4 +1,4 @@
-.PHONY: observability-up observability-down test smoke report compare evidence-bundle validate
+.PHONY: observability-up observability-down test smoke report compare evidence-bundle peerdb-example-charts validate
 
 PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 RESULTS ?=
@@ -14,7 +14,7 @@ test:
 
 validate: test
 	$(PYTHON) -m ruff format --check .
-	$(PYTHON) -m py_compile cdc_lab.py analyze.py compare.py report.py destination.py metrics.py clickpipe_metrics.py
+	$(PYTHON) -m py_compile cdc_lab.py analyze.py compare.py report.py destination.py metrics.py clickpipe_metrics.py peerdb_metrics.py plot_peerdb_results.py scripts/collect_postgres_slot_metrics.py
 	$(PYTHON) -m json.tool observability/grafana/dashboards/pg-cdc-lab.json >/dev/null
 	docker compose config -q
 
@@ -32,3 +32,6 @@ compare:
 evidence-bundle:
 	test -n "$(RESULTS)"
 	$(PYTHON) report.py $(RESULTS)
+
+peerdb-example-charts:
+	$(PYTHON) plot_peerdb_results.py results/examples/baseline-500k --output charts/peerdb

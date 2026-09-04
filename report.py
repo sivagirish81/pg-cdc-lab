@@ -4,13 +4,40 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import shutil
 from pathlib import Path
 
-from analyze import fmt_bytes, fmt_ms
+from analyze import fmt_bytes, fmt_ms, sanitize_run_metadata
 from charts import generate_run_charts
 from compare import write_comparison
+
+
+def sanitize_evidence_copy(path: Path) -> None:
+    metadata = path / "metadata.json"
+    if metadata.exists():
+        clean = sanitize_run_metadata(json.loads(metadata.read_text(encoding="utf-8")))
+        metadata.write_text(json.dumps(clean, indent=2) + "\n", encoding="utf-8")
+    metrics = path / "clickpipe_metrics.csv"
+    if metrics.exists() and metrics.stat().st_size:
+        with metrics.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            rows = list(reader)
+            fields = reader.fieldnames or []
+        for row in rows:
+            for private_field in (
+                "clickhouse_service_id",
+                "clickhouse_service_name",
+                "clickpipe_id",
+                "clickpipe_name",
+            ):
+                if row.get(private_field):
+                    row[private_field] = "<redacted>"
+        with metrics.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader()
+            writer.writerows(rows)
 
 
 def build_bundle(result_dirs: list[Path], output: Path) -> None:
@@ -29,13 +56,17 @@ def build_bundle(result_dirs: list[Path], output: Path) -> None:
             path, summary, charts / str(summary.get("run_id") or path.name)
         )
         if (path / "metadata.json").exists():
-            shutil.copy2(
-                path / "metadata.json", manifests / f"{summary.get('run_id')}.json"
+            metadata = sanitize_run_metadata(
+                json.loads((path / "metadata.json").read_text(encoding="utf-8"))
+            )
+            (manifests / f"{summary.get('run_id')}.json").write_text(
+                json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
             )
         target = raw / path.name
         if target.exists():
             shutil.rmtree(target)
         shutil.copytree(path, target)
+        sanitize_evidence_copy(target)
     (output / "grafana").mkdir(exist_ok=True)
     shutil.copy2(
         repository / "observability/grafana/dashboards/pg-cdc-lab.json",

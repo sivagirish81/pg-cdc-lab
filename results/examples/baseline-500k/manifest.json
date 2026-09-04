@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "run_id": "eeadf06b-b85a-4880-80d2-3053f8539b91",
+  "utc_started_at": null,
+  "commit_observed_at": "2026-09-04T07:37:57.350374Z",
+  "transaction_rows": 500000,
+  "workload_mode": "manual_psql",
+  "source_table": "cdc_lab.cdc_probe_large",
+  "destination_table": "cdc_lab_cdc_probe_large",
+  "raw_peerdb_table": "default._peerdb_raw_mirror_66293a1b__8762__4433__b816__898bd6a4479a",
+  "client_commit_duration_ms": null,
+  "small_txn_rate": null,
+  "hold_open_seconds": null,
+  "environment": {
+    "source": "ClickHouse Managed Postgres trial",
+    "cdc_path": "ClickPipes CDC / PeerDB",
+    "credentials_redacted": true
+  },
+  "measurement_scope": "one observed baseline run"
+}

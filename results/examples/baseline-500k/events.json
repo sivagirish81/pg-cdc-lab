@@ -1,0 +1,32 @@
+[
+  {
+    "stage": "postgres_commit",
+    "ts": "2026-09-04T07:37:57.350374Z"
+  },
+  {
+    "stage": "first_raw_cdc",
+    "ts": "2026-09-04T07:37:57.815785937Z"
+  },
+  {
+    "stage": "last_raw_cdc",
+    "ts": "2026-09-04T07:38:05.536255907Z"
+  },
+  {
+    "stage": "raw_insert",
+    "start_ts": null,
+    "finish_ts": null,
+    "duration_ms": 1197,
+    "available": false
+  },
+  {
+    "stage": "final_insert",
+    "start_ts": null,
+    "finish_ts": null,
+    "duration_ms": 653,
+    "available": false
+  },
+  {
+    "stage": "destination_sync",
+    "ts": "2026-09-04T07:38:07.319000Z"
+  }
+]
